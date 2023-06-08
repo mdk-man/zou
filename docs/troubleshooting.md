@@ -43,7 +43,7 @@ Zou cannot connect to it. Zou cannot run properly in that case.
 NB: Database refers to Posgres, Key Value Store refers to Redis, Event
 Stream refers to `zou-events` service, job queue refers to `zou-jobs` service.
 
-# Changing password
+## Changing password
 
 If, for any reasons, the user cannot access to his rest password email, you can
 put his password back to "default" with the following command:
@@ -62,6 +62,26 @@ software step:
 ```bash
 sudo apt-get install libjpeg-dev
 ```
+
+## Solving LDAP sync problems on Ubuntu 22.04.2 LTS
+
+If you encounter `ModuleNotFoundError: No module named 'Crypto'`
+or `ValueError: unsupported hash type MD4` edit the file
+`/etc/ssl/openssl.cnf` to add legacy support.
+
+Update the following sections :
+```
+[provider_sect]
+default = default_sect
+legacy = legacy_sect
+
+[default_sect]
+activate = 1
+
+[legacy_sect]
+activate = 1
+```
+
 
 ## To enable zou to start on reboot
 
