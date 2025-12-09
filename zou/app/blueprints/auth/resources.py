@@ -34,6 +34,7 @@ from zou.app.services import (
 
 from zou.app.utils.flask import is_from_browser
 from zou.app.utils.saml import saml_client_for
+from zou.app.utils.oidc import get_oidc_session
 
 from zou.app.stores import auth_tokens_store
 from zou.app.services.exception import (
@@ -1600,3 +1601,77 @@ class SAMLLoginResource(Resource, ArgsMixin):
                 redirect_url = value
 
         return redirect(redirect_url, code=302)
+
+class OIDCLoginResource(Resource):
+    def get(self):
+        if not config.OIDC_ENABLED:
+            return {"error": "OIDC is not enabled."}, 400
+
+        oauth, provider = get_oidc_session()
+        authorization_endpoint = provider["authorization_endpoint"]
+
+        uri, _ = oauth.create_authorization_url(authorization_endpoint)
+
+        return redirect(uri)
+
+class OIDCCallbackResource(Resource):
+    def get(self):
+        if not config.OIDC_ENABLED:
+            return {"error": "OIDC is not enabled."}, 400
+
+        if "code" not in request.args:
+            return {"error": "Missing code"}, 400
+
+        code = request.args.get("code")
+        oauth, provider = get_oidc_session()
+
+        token = oauth.fetch_token(
+            provider["token_endpoint"],
+            code=code,
+            client_secret=config.OIDC_CLIENT_SECRET
+        )
+
+        # Récupération du userinfo OIDC
+        userinfo = oauth.get(provider["userinfo_endpoint"]).json()
+
+        # OIDC standard claims
+        email = userinfo.get("email")
+        first_name = userinfo.get("given_name", "")
+        last_name = userinfo.get("family_name", "")
+
+        if not email:
+            return {"error": "OIDC userinfo missing email"}, 400
+
+        person_info = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "active": True,
+        }
+
+        try:
+            user = persons_service.get_person_by_email(email)
+            persons_service.update_person(
+                user["id"], person_info, bypass_protected_accounts=True
+            )
+        except PersonNotFoundException:
+            user = persons_service.create_person(
+                email, "default".encode("utf-8"), **person_info
+            )
+
+        # → réutilisation du mécanisme JWT interne
+        access_token = create_access_token(
+            identity=user["id"],
+            additional_claims={"identity_type": "person"},
+        )
+        refresh_token = create_refresh_token(
+            identity=user["id"],
+            additional_claims={"identity_type": "person"},
+        )
+
+        response = make_response(
+            redirect(f"{config.DOMAIN_PROTOCOL}://{config.DOMAIN_NAME}")
+        )
+        set_access_cookies(response, access_token)
+        set_refresh_cookies(response, refresh_token)
+
+        return response

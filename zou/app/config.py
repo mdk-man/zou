@@ -142,6 +142,14 @@ SAML_METADATA_URL = os.getenv("SAML_METADATA_URL", "")
 SAML_SP_PRIVATE_KEY = os.getenv("SAML_SP_PRIVATE_KEY", None)
 SAML_SP_PUBLIC_CERT = os.getenv("SAML_SP_PUBLIC_CERT", None)
 XMLSEC_BINARY = os.getenv("XMLSEC_BINARY", "/usr/bin/xmlsec1")
+
+OIDC_ENABLED = envtobool("OIDC_ENABLED", False)
+OIDC_IDP_NAME = os.getenv("OIDC_IDP_NAME", "")
+OIDC_CLIENT_ID = os.getenv("OIDC_CLIENT_ID", "")
+OIDC_CLIENT_SECRET = os.getenv("OIDC_CLIENT_SECRET", "")
+OIDC_ISSUER = os.getenv("OIDC_ISSUER", "")  # ex: https://keycloak/auth/realms/myrealm
+OIDC_REDIRECT_URI = os.getenv("OIDC_REDIRECT_URI", "")  # https://kitsu.domain/api/auth/oidc/callback
+
 LOGS_MODE = os.getenv("LOGS_MODE", "default")
 LOGS_HOST = os.getenv("LOGS_HOST", "localhost")
 LOGS_PORT = os.getenv("LOGS_PORT", 2202)
