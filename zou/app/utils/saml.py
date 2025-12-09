@@ -8,6 +8,18 @@ from saml2.client import Saml2Client
 from saml2.config import Config as Saml2Config
 
 from zou.app import config
+import os
+
+
+def sp_can_sign():
+    try:
+        pk_exists = os.path.exists(config.SAML_SP_PRIVATE_KEY)
+        pc_exists = os.path.exists(config.SAML_SP_PUBLIC_CERT)
+        if pk_exists and pc_exists:
+            return True
+    except:
+        pass
+    return False
 
 
 def saml_client_for(metadata_url):
@@ -37,13 +49,20 @@ def saml_client_for(metadata_url):
                 "allow_unsolicited": True,
                 # Don't sign authn requests, since signed requests only make
                 # sense in a situation where you control both the SP and IdP
-                "authn_requests_signed": False,
+                "authn_requests_signed": sp_can_sign(),
                 "logout_requests_signed": True,
                 "want_assertions_signed": True,
                 "want_response_signed": False,
             },
         },
+        "key_file": config.SAML_SP_PRIVATE_KEY,
+        "cert_file": config.SAML_SP_PUBLIC_CERT,
+
+        # Required if signing is active
+        "signature_algorithm": "rsa-sha256",
+        "digest_algorithm": "sha256",        
     }
+
     spConfig = Saml2Config()
     spConfig.load(settings)
     spConfig.allow_unknown_attributes = True
